@@ -100,7 +100,7 @@ app.post(`/chatapi/:id`, Auth,creditCheck, async (req, res) => {
     const completion = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${process.env.OPENAI}`,
+        "Authorization": `Bearer ${process.env.OPENAI4}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({

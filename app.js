@@ -92,9 +92,6 @@ app.post(`/chatapi/:id`, Auth, async (req, res) => {
   const prompt = req.body?.prompt;
   const userId = req.user?._id;
 
-  console.log("id:", id);
-  console.log("prompt:", prompt);
-
   if (!prompt) {
     return res.status(400).json({ error: "Input is required" });
   }
@@ -108,45 +105,43 @@ app.post(`/chatapi/:id`, Auth, async (req, res) => {
       },
       body: JSON.stringify({
         model: "google/gemma-3-4b-it:free",
-        messages: [
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
+        messages: [{ role: "user", content: prompt }],
         response_format: { type: "json_object" },
       }),
     });
 
-    const data = await completion.json(); // ✅ FIX: move this up before trying to use `data`
+    const data = await completion.json();
 
-    // ✅ Only save response to DB if id == '2' and user is authenticated
+    // Save history and decrease credit if id == '2'
     if (id === '2' && userId) {
-      await User.findByIdAndUpdate(
+      const updatedUser = await User.findByIdAndUpdate(
         userId,
         {
           $push: {
             history: {
-              response: data, // Push full response
-              searchedAt: new Date(),
+              response: data,
+              createdAt: new Date(),
             },
           },
+          $inc: { credits: -1 }, // ✅ match your schema field name
         },
         { new: true }
       );
-      const userCredit=await User.findById(userId);
-      userCredit.credits-=1;
-      await userCredit.save();
+
+      if (updatedUser.credits < 0) {
+        // Optional: prevent credit from going below 0
+        updatedUser.credits = 0;
+        await updatedUser.save();
+      }
     }
 
-    console.log("Completion response:", data);
     res.status(200).json(data);
-
   } catch (error) {
     console.error("❌ Error from OpenRouter:", error?.response?.data || error.message);
     res.status(500).json({ error: "Something went wrong" });
   }
 });
+
 
 
 app.post('/photoAPI', Auth, async (req, resp) => {

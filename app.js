@@ -87,7 +87,7 @@ app.post('/signin', async (req, res) => {
   }
 });
 
-app.post(`/chatapi/:id`, Auth, async (req, res) => {
+app.post(`/chatapi/:id`, Auth,creditCheck, async (req, res) => {
   const { id } = req.params;
   const prompt = req.body?.prompt;
   const userId = req.user?._id;

@@ -8,7 +8,7 @@ const CheckCredit = async (req, res, next) => {
       const user = await User.findById(userId);
       if (!user) return res.status(404).json({ error: 'User not found' });
   
-      if (user.credit <= 0) {
+      if (user.credits <= 0) {
         return res.status(403).json({ error: 'Insufficient credit' });
       }
   

@@ -11,7 +11,7 @@ const jwt = require('jsonwebtoken');
 const Auth = require('./middleware/authMiddleware')
 const creditCheck=require('./middleware/creditCheck')
 const cookieParser = require('cookie-parser')
-
+const PORT=process.env.PORT || 8001
 app.use(express.json());
 app.use(cookieParser())
 
@@ -218,6 +218,6 @@ app.delete('/delete/:index', Auth, async (req, res) => {
   }
 })
 
-// app.listen(8001, () => {
-//   console.log('Server at 8001 is started')
-// })
+app.listen(PORT, () => {
+  console.log('Server at 8001 is started')
+})

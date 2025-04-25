@@ -12,7 +12,7 @@ const Auth = require('./middleware/authMiddleware')
 const creditCheck=require('./middleware/creditCheck')
 const cookieParser = require('cookie-parser')
 
-
+app.use(express.json());
 app.use(cookieParser())
 
 require('dotenv').config();
@@ -218,6 +218,6 @@ app.delete('/delete/:index', Auth, async (req, res) => {
   }
 })
 
-app.listen(8001, () => {
-  console.log('Server at 8001 is started')
-})
+// app.listen(8001, () => {
+//   console.log('Server at 8001 is started')
+// })

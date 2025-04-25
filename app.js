@@ -146,6 +146,10 @@ app.post(`/chatapi/:id`, Auth, async (req, res) => {
   }
 });
 
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
 app.post('/photoAPI', Auth, async (req, resp) => {
   console.log("body", req.body)
   console.log(req.body?.ImagePrompt)

@@ -4,7 +4,6 @@ const mongoose = require('mongoose')
 app.use(express.json());
 const OpenAI = require('openai')
 const User = require('./Schema');
-// const PROMPT = require('../services/PROMPT');
 const bcrypt = require('bcrypt');
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
@@ -14,135 +13,35 @@ const cookieParser = require('cookie-parser')
 const PORT=process.env.PORT || 8001
 app.use(express.json());
 app.use(cookieParser())
-
 require('dotenv').config();
-
 mongoose.connect(process.env.DataBaseURL).then(() => console.log("Database connected Succesfully")).catch((err) => console.log(err, "Database not connected"))
-
 const saltRound = 10;
-app.post('/register', async (req, resp) => {
-  const { name, email, phoneNo, password } = req.body;
+//auth Routing
+const userRoutes = require('./Router/auth');
+const chatRoutes = require('./Router/chatAI');
+app.use('/', userRoutes);
+app.use('/',chatRoutes);
 
+const Stripe = require('stripe');
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+app.post('/payment_intent', async (req, res) => {
   try {
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return resp.status(400).json({ message: "User already exists" });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10); // saltRound = 10
-    const newUser = new User({ name, email, phoneNo, password: hashedPassword });
-    await newUser.save();
-
-    const token = jwt.sign(
-      { _id: newUser._id, email: newUser.email }, // <== includes _id
-      process.env.JWT_SECRET,
-      { expiresIn: '10d' }
-    );
-
-
-    return resp.status(201).json({
-      status: 'OK',
-      message: 'User created successfully',
-      token,
-      user: { name, email, phoneNo,credits:2}
-      // user:req.body
+    const { amount } = req.body;
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount, 
+      currency: 'inr', 
+      payment_method_types: ['card', 'upi', 'netbanking', 'wallet']
     });
 
-  } catch (error) {
-    console.error("Error creating user:", error);
-    return resp.status(500).json({
-      status: "Error",
-      message: "Internal Server Error",
-      error: error.message
+    return res.status(200).json({
+      clientSecret: paymentIntent.client_secret,
     });
-  }
-});
-
-app.post('/signin', async (req, res) => {
-  const { email, password } = req.body;
-  console.log("1");
-  try {
-    const user = await User.findOne({ email: email });
-    if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials - User not found' });
-    }
-    console.log("2");
-    const passwordMatch = await bcrypt.compare(password, user.password);
-    if (!passwordMatch) {
-      return res.status(401).json({ message: 'Invalid credentials - Password mismatch' });
-    }
-    console.log("3");
-    const token = jwt.sign(
-      { _id: user._id, email: user.email }, // <== includes _id
-      process.env.JWT_SECRET,
-      { expiresIn: '10d' }
-    );
-    console.log("4");
-    console.log(token);
-
-    res.status(200).json({ message: 'Sign in successful', token, user: {email,password,name:user.name,credits:user.credits}});
   } catch (error) {
-    console.error('Error during sign in:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error('Error creating payment intent', error);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
-
-app.post(`/chatapi/:id`, Auth,creditCheck, async (req, res) => {
-  const { id } = req.params;
-  const prompt = req.body?.prompt;
-  const userId = req.user?._id;
-
-  if (!prompt) {
-    return res.status(400).json({ error: "Input is required" });
-  }
-
-  try {
-    const completion = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${process.env.OPENAI4}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemma-3-4b-it:free",
-        messages: [{ role: "user", content: prompt }],
-        response_format: { type: "json_object" },
-      }),
-    });
-
-    const data = await completion.json();
-
-    // Save history and decrease credit if id == '2'
-    if (id === '2' && userId) {
-      const updatedUser = await User.findByIdAndUpdate(
-        userId,
-        {
-          $push: {
-            history: {
-              response: data,
-              createdAt: new Date(),
-            },
-          },
-          $inc: { credits: -1 }, // ✅ match your schema field name
-        },
-        { new: true }
-      );
-
-      if (updatedUser.credits < 0) {
-        // Optional: prevent credit from going below 0
-        updatedUser.credits = 0;
-        await updatedUser.save();
-      }
-    }
-
-    res.status(200).json(data);
-  } catch (error) {
-    console.error("❌ Error from OpenRouter:", error?.response?.data || error.message);
-    res.status(500).json({ error: "Something went wrong" });
-  }
-});
-
-
 
 app.post('/photoAPI', Auth, async (req, resp) => {
   console.log("body", req.body)

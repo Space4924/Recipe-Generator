@@ -17,16 +17,16 @@ const paymentWebhook = require('./Router/payment').stripeWebhook;
 app.use(cookieParser());
 
 // ⭐ 1. Webhook must be mounted BEFORE express.json()
-app.use('/api/webhook', paymentWebhook);
+app.use('/', paymentWebhook);
 
 // ⭐ 2. Now parse JSON body for all other routes
 app.use(express.json());
 
 // ⭐ 3. Mount other routes with proper prefixes
-app.use('/api/payment', paymentRoutes);
-app.use('/api/user', userRoutes);
-app.use('/api/chat', chatRoutes);
-app.use('/api/photo', photoAIRoutes);
+app.use('/', paymentRoutes);
+app.use('/', userRoutes);
+app.use('/', chatRoutes);
+app.use('/', photoAIRoutes);
 
 // Fetch user history
 app.get('/api/fetch', Auth, async (req, res) => {
@@ -44,7 +44,7 @@ app.get('/api/fetch', Auth, async (req, res) => {
 
 // Delete user history item
 
-app.delete('/api/delete/:index', Auth, async (req, res) => {
+app.delete('/delete/:index', Auth, async (req, res) => {
   const userId = req.user._id;
   const index = parseInt(req.params.index, 10);
 

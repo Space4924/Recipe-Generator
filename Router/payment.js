@@ -6,13 +6,11 @@ const User = require('../Schema');
 const Auth = require('../middleware/authMiddleware');
 const Stripe = require('stripe');
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-console.log(stripe);
 
-// Payment Intent
+// 💳 Create Payment Intent
 router.post('/payment_intent', Auth, async (req, res) => {
   const userId = req.user?._id;
   const { amount, credits } = req.body;
-  console.log(req.body);
 
   if (!userId) {
     return res.status(401).json({ error: "Unauthorized. User ID missing." });
@@ -25,7 +23,7 @@ router.post('/payment_intent', Auth, async (req, res) => {
       payment_method_types: ['card'],
       metadata: {
         userId: userId.toString(),
-        credits:credits
+        credits: credits.toString() // Ensure credits are string for Stripe metadata
       }
     });
 
@@ -38,16 +36,13 @@ router.post('/payment_intent', Auth, async (req, res) => {
   }
 });
 
-// Stripe Webhook (RAW BODY)
+// 📩 Stripe Webhook Handler (needs RAW body)
 expressRawRouter.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
-
   const sig = req.headers['stripe-signature'];
-  console.log(sig);
-  console.log("1");
+  console.log("sig",sig);
 
   let event;
   try {
-    //stripe_webhook_secret
     event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
   } catch (err) {
     console.error('Webhook signature verification failed:', err.message);
@@ -58,20 +53,15 @@ expressRawRouter.post('/webhook', express.raw({ type: 'application/json' }), asy
     const paymentIntent = event.data.object;
     const metadata = paymentIntent.metadata;
     const userId = metadata?.userId;
-    const credits = metadata?.credits;
+    const credits = parseInt(metadata?.credits);
 
-    if (userId && packageType) {
+    if (userId && credits) {
       try {
         const user = await User.findById(userId);
         if (user) {
-          // let creditsToAdd = 0;
-          // if (packageType === 'small') creditsToAdd = 5;
-          // else if (packageType === 'medium') creditsToAdd = 15;
-          // else if (packageType === 'large') creditsToAdd = 50;
-
           user.credits += credits;
           await user.save();
-          console.log(`✅ Updated ${creditsToAdd} credits for user ${user.email}`);
+          console.log(`✅ Added ${credits} credits to user ${user.email}`);
         }
       } catch (error) {
         console.error('Error updating user credits:', error.message);
@@ -82,5 +72,6 @@ expressRawRouter.post('/webhook', express.raw({ type: 'application/json' }), asy
   res.json({ received: true });
 });
 
+// 🛡️ Export both routers
 module.exports = router;
 module.exports.stripeWebhook = expressRawRouter;

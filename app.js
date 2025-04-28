@@ -6,23 +6,18 @@ const Auth = require('./middleware/authMiddleware');
 const User = require('./Schema');
 require('./dbConnect');
 
-// Load Routes
 const userRoutes = require('./Router/auth');
 const chatRoutes = require('./Router/chatAI');
 const photoAIRoutes = require('./Router/photoAI');
 const paymentRoutes = require('./Router/payment');
 const paymentWebhook = require('./Router/payment').stripeWebhook;
 
-// Middleware
 app.use(cookieParser());
 
-// ⭐ 1. Webhook must be mounted BEFORE express.json()
 app.use('/', paymentWebhook);
 
-// ⭐ 2. Now parse JSON body for all other routes
 app.use(express.json());
 
-// ⭐ 3. Mount other routes with proper prefixes
 app.use('/', paymentRoutes);
 app.use('/', userRoutes);
 app.use('/', chatRoutes);
@@ -41,7 +36,25 @@ app.get('/api/fetch', Auth, async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+// fetch the User History
+app.get('/fetch', Auth, async (req, res) => {
+  console.log("working");
+  try {
+    const userId = req.user._id;
 
+    const user = await User.findById(userId).select('history'); // only select history field
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.status(200).json(user.history);
+
+  } catch (error) {
+    console.error("❌ Error fetching user history:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+});
 // Delete user history item
 
 app.delete('/delete/:index', Auth, async (req, res) => {

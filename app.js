@@ -5,18 +5,22 @@ const User = require('./Schema');
 const Auth = require('./middleware/authMiddleware')
 const cookieParser = require('cookie-parser')
 const PORT=process.env.PORT || 8001
-app.use(express.json());
 app.use(cookieParser())
 require('dotenv').config();
 
 //auth Routing
 require('./dbConnect');
-const paymentWebhook = require('./Router/payment').stripeWebhook;
 const userRoutes = require('./Router/auth');
 const chatRoutes = require('./Router/chatAI');
 const paymentRoutes=require('./Router/payment');
 const photoAI=require('./Router/photoAI');
+
+const paymentWebhook = require('./Router/payment').stripeWebhook;
 app.use('/', paymentWebhook);
+
+// const { stripeWebhook } = require('./Router/payment');
+// app.use('/api', stripeWebhook);
+app.use(express.json());
 app.use('/',paymentRoutes);
 app.use('/', userRoutes);
 app.use('/',chatRoutes);

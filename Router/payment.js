@@ -11,7 +11,7 @@ console.log(stripe);
 // Payment Intent
 router.post('/payment_intent', Auth, async (req, res) => {
   const userId = req.user?._id;
-  const { amount, packageType } = req.body;
+  const { amount, credits } = req.body;
   console.log(req.body);
 
   if (!userId) {
@@ -25,7 +25,7 @@ router.post('/payment_intent', Auth, async (req, res) => {
       payment_method_types: ['card'],
       metadata: {
         userId: userId.toString(),
-        packageType: packageType
+        credits:credits
       }
     });
 
@@ -58,18 +58,18 @@ expressRawRouter.post('/webhook', express.raw({ type: 'application/json' }), asy
     const paymentIntent = event.data.object;
     const metadata = paymentIntent.metadata;
     const userId = metadata?.userId;
-    const packageType = metadata?.packageType;
+    const credits = metadata?.credits;
 
     if (userId && packageType) {
       try {
         const user = await User.findById(userId);
         if (user) {
-          let creditsToAdd = 0;
-          if (packageType === 'small') creditsToAdd = 5;
-          else if (packageType === 'medium') creditsToAdd = 15;
-          else if (packageType === 'large') creditsToAdd = 50;
+          // let creditsToAdd = 0;
+          // if (packageType === 'small') creditsToAdd = 5;
+          // else if (packageType === 'medium') creditsToAdd = 15;
+          // else if (packageType === 'large') creditsToAdd = 50;
 
-          user.credits += creditsToAdd;
+          user.credits += credits;
           await user.save();
           console.log(`✅ Updated ${creditsToAdd} credits for user ${user.email}`);
         }

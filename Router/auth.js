@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../Schema');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
+
+const saltRound = 10;
 
 router.post('/register', async (req, resp) => {
     const { name, email, phoneNo, password } = req.body;
@@ -68,7 +72,5 @@ router.post('/signin', async (req, res) => {
         res.status(500).json({ message: 'Internal server error' });
     }
 });
-
-
 
 module.exports = router;

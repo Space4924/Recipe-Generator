@@ -10,6 +10,7 @@ router.post('/chatapi/:id', Auth, creditCheck, async (req, res) => {
     const { id } = req.params;
     const prompt = req.body?.prompt;
     const userId = req.user?._id;
+    console.log(id,prompt,userId);
 
     if (!prompt) {
         return res.status(400).json({ error: "Input is required" });
@@ -31,6 +32,7 @@ router.post('/chatapi/:id', Auth, creditCheck, async (req, res) => {
         });
 
         const data = await completion.json();
+        console.log("Backend Data is ",data);
 
         // 2. Generate image
         
@@ -57,6 +59,7 @@ router.post('/chatapi/:id', Auth, creditCheck, async (req, res) => {
                     }
                 );
                 imageURL = imageRes.data.image;
+                console.log(imageURL);
             } catch (imageError) {
                 console.error("Image generation error:", imageError?.response?.data || imageError.message);
             }
@@ -79,13 +82,13 @@ router.post('/chatapi/:id', Auth, creditCheck, async (req, res) => {
             }
 
             return res.status(200).json({
-                response: data,
+                data: data,
                 image: imageURL,
             });
         }
 
         // 4. Send final response
-        return res.status(200).json(data);
+        return res.status(200).json({data:data});
 
     } catch (error) {
         console.error("❌ Error in chatapi route:", error?.response?.data || error.message);

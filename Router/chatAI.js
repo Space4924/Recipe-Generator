@@ -1,10 +1,12 @@
 const express = require('express');
 const router = express.Router();
+const axios = require('axios'); 
 const User = require('../Schema');
 const Auth = require('../middleware/authMiddleware');
 const creditCheck = require('../middleware/creditCheck');
+require('dotenv').config();
 
-router.post(`/chatapi/:id`, Auth, creditCheck, async (req, res) => {
+router.post('/chatapi/:id', Auth, creditCheck, async (req, res) => {
     const { id } = req.params;
     const prompt = req.body?.prompt;
     const userId = req.user?._id;
@@ -14,6 +16,7 @@ router.post(`/chatapi/:id`, Auth, creditCheck, async (req, res) => {
     }
 
     try {
+        // 1. Get response from OpenRouter
         const completion = await fetch("https://openrouter.ai/api/v1/chat/completions", {
             method: "POST",
             headers: {
@@ -29,35 +32,65 @@ router.post(`/chatapi/:id`, Auth, creditCheck, async (req, res) => {
 
         const data = await completion.json();
 
-        // Save history and decrease credit if id == '2'
+        // 2. Generate image
+        
+        // 3. Save history & update user if id == '2'
         if (id === '2' && userId) {
-            const updatedUser = await User.findByIdAndUpdate(
-                userId,
-                {
-                    $push: {
-                        history: {
-                            response: data,
-                            createdAt: new Date(),
-                        },
+
+
+            let imageURL = null;
+            try {
+                const imageRes = await axios.post(
+                    'https://aigurulab.tech/api/generate-image',
+                    {
+                        width: 1024,
+                        height: 1024,
+                        input: "Give me Photo for this Prompt: " + prompt,
+                        model: 'sdxl',
+                        aspectRatio: "1:1",
                     },
-                    $inc: { credits: -1 }, // ✅ match your schema field name
+                    {
+                        headers: {
+                            'x-api-key': process.env.PhotoAPI,
+                            'Content-Type': 'application/json',
+                        },
+                    }
+                );
+                imageURL = imageRes.data.image;
+            } catch (imageError) {
+                console.error("Image generation error:", imageError?.response?.data || imageError.message);
+            }
+            const updateFields = {
+                $inc: { credits: -1 },
+                $push: {
+                    history: {
+                        response: data,
+                        createdAt: new Date(),
+                        ...(imageURL && { imageURL }), // include image if available
+                    },
                 },
-                { new: true }
-            );
+            };
+
+            const updatedUser = await User.findByIdAndUpdate(userId, updateFields, { new: true });
 
             if (updatedUser.credits < 0) {
-                // Optional: prevent credit from going below 0
                 updatedUser.credits = 0;
                 await updatedUser.save();
             }
+
+            return res.status(200).json({
+                response: data,
+                image: imageURL,
+            });
         }
 
-        res.status(200).json(data);
+        // 4. Send final response
+        return res.status(200).json(data);
+
     } catch (error) {
-        console.error("❌ Error from OpenRouter:", error?.response?.data || error.message);
-        res.status(500).json({ error: "Something went wrong" });
+        console.error("❌ Error in chatapi route:", error?.response?.data || error.message);
+        return res.status(500).json({ error: "Something went wrong" });
     }
 });
-
 
 module.exports = router;

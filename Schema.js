@@ -8,6 +8,7 @@ const registerSchema = new mongoose.Schema({
       {
         response: mongoose.Schema.Types.Mixed, // to store the full GPT response
         createdAt: { type: Date, default: Date.now },
+        imageURL:String
       },
     ],
     credits:{

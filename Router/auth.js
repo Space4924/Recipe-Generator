@@ -46,27 +46,22 @@ router.post('/register', async (req, resp) => {
 
 router.post('/signin', async (req, res) => {
     const { email, password } = req.body;
-    console.log("1");
     try {
         const user = await User.findOne({ email: email });
         if (!user) {
             return res.status(401).json({ message: 'Invalid credentials - User not found' });
         }
-        console.log("2");
         const passwordMatch = await bcrypt.compare(password, user.password);
         if (!passwordMatch) {
             return res.status(401).json({ message: 'Invalid credentials - Password mismatch' });
         }
-        console.log("3");
         const token = jwt.sign(
             { _id: user._id, email: user.email }, // <== includes _id
             process.env.JWT_SECRET,
             { expiresIn: '10d' }
         );
-        console.log("4");
-        console.log(token);
 
-        res.status(200).json({ message: 'Sign in successful', token, user: { email, password, name: user.name, credits: user.credits } });
+        res.status(200).json({ message: 'Sign in successful', token, user: { email, phoneNo:user.phoneNo, name: user.name, credits: user.credits } });
     } catch (error) {
         console.error('Error during sign in:', error);
         res.status(500).json({ message: 'Internal server error' });
